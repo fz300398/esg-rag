@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+.venv/
+.env
+data/
+index/
+hf_cache/
+ollama/
+models/
+*.onnx
+*.safetensors
+*.pt
+*.bin
+.vscode/
+.DS_Store
