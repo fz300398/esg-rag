@@ -1,15 +1,20 @@
+﻿# Python
 __pycache__/
 *.pyc
 .venv/
-.env
+
+# Local data & indexes
 data/
 index/
+chroma/
 hf_cache/
 ollama/
-models/
-*.onnx
-*.safetensors
-*.pt
-*.bin
+
+# Env files (Secrets)
+.env
+.env.*
+!.env.example
+
+# IDE
 .vscode/
-.DS_Store
+.idea/
