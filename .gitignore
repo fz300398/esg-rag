@@ -13,7 +13,6 @@ ollama/
 # Env files (Secrets)
 .env
 .env.*
-!.env.example
 
 # IDE
 .vscode/
