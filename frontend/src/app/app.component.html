@@ -1,0 +1,30 @@
+<div class="container">
+  <header class="header">
+    <img src="assets/THWS.png" alt="THWS Logo" class="logo" />
+    <h1>ESG Assistant</h1>
+  </header>
+
+  <section class="upload">
+    <label for="file">📄 Neue ESG-PDF hochladen:</label>
+    <input type="file" (change)="uploadFile($event)" accept=".pdf" />
+    <div *ngIf="uploading">⏳ Upload läuft...</div>
+  </section>
+
+  <section class="chat">
+    <label for="question">💬 Frage stellen:</label>
+    <textarea [(ngModel)]="question" rows="3" placeholder="Welche ESG-Ziele hat das Unternehmen?"></textarea>
+    <button (click)="ask()">Senden</button>
+  </section>
+
+  <section class="response" *ngIf="answer">
+    <h2>Antwort</h2>
+    <p>{{ answer }}</p>
+
+    <h3>Kontext</h3>
+    <ul>
+      <li *ngFor="let c of contexts">
+        <b>{{ c.source }}</b> (Seite {{ c.page }})
+      </li>
+    </ul>
+  </section>
+</div>

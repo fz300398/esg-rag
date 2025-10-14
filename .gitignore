@@ -1,19 +1,57 @@
-﻿# Python
+﻿# Python / Backend
 __pycache__/
-*.pyc
+*.py[cod]
+*.pyo
+*.pyd
+*.log
+*.sqlite3
+*.db
 .venv/
+env/
+venv/
+instance/
+build/
+dist/
+*.egg-info/
 
-# Local data & indexes
+# Cache / Local data
 data/
-index/
 chroma/
 hf_cache/
+cache/
 ollama/
 
-# Env files (Secrets)
+# Environment Files
 .env
 .env.*
+!.env.example
 
-# IDE
+# Docker
+*.pid
+*.seed
+docker-compose.override.yml
+docker-compose.dev.yml
+**/Dockerfile~
+**/Dockerfile.old
+
+# Angular / Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+frontend/.cache/
+frontend/package-lock.json
+
+# IDE / Editor Config
 .vscode/
 .idea/
+*.swp
+*.swo
+*.bak
+*.tmp
+backend/.idea/
+frontend/.vscode/
+
+# OS Generated Files
+.DS_Store
+Thumbs.db
+desktop.ini
