@@ -2,7 +2,6 @@
   backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile
     container_name: esg-backend
     ports:
       - "8000:8000"
@@ -12,18 +11,17 @@
       - ./backend/chroma:/app/chroma
     env_file:
       - ./backend/.env
-    environment:
-      - OLLAMA_BASE_URL=http://host.docker.internal:11434
     networks:
       - esg_net
     restart: unless-stopped
+    command: >
+      uvicorn server:app --host 0.0.0.0 --port 8000 --reload
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile
     container_name: esg-frontend
     ports:
-      - "4200:80"
+      - "4200:4200"
     volumes:
       - ./frontend:/app
       - /app/node_modules

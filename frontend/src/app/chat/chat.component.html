@@ -1,0 +1,14 @@
+<div class="chat-container">
+  <h2>ESG Assistant</h2>
+  <div class="chat-window">
+    <div *ngFor="let msg of messages" [class.user]="msg.sender === 'User'" [class.bot]="msg.sender === 'Bot'">
+      <b>{{ msg.sender }}:</b> {{ msg.text }}
+    </div>
+  </div>
+
+  <div class="chat-input">
+    <input [(ngModel)]="question" placeholder="Frage eingeben..." />
+    <button (click)="sendMessage()">Senden</button>
+    <button (click)="logout()">Logout</button>
+  </div>
+</div>

@@ -1,21 +1,15 @@
 {
-  "compileOnSave": false,
   "compilerOptions": {
-    "baseUrl": "./",
-    "outDir": "./dist/out-tsc",
-    "sourceMap": true,
-    "declaration": false,
-    "downlevelIteration": true,
-    "experimentalDecorators": true,
-    "moduleResolution": "node",
-    "importHelpers": true,
     "target": "ES2022",
     "module": "ESNext",
-    "lib": ["ES2022", "DOM"],
-    "skipLibCheck": true,
-    "strict": true
+    "strict": true,
+    "noImplicitAny": true,
+    "moduleResolution": "node",
+    "baseUrl": "./",
+    "paths": {
+      "@env/*": ["src/environments/*"]
+    },
+    "skipLibCheck": true
   },
-  "angularCompilerOptions": {
-    "strictTemplates": true
-  }
+  "include": ["src/**/*.ts"]
 }
