@@ -14,7 +14,7 @@
             "outputPath": "dist/esg-frontend",
             "index": "src/index.html",
             "browser": "src/main.ts",
-			"tsConfig": "tsconfig.json",
+            "tsConfig": "tsconfig.json",
             "polyfills": [
               "zone.js"
             ],
@@ -38,7 +38,7 @@
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
           "options": {
-            "buildTarget": "esg-frontend:build
+            "buildTarget": "esg-frontend:build"
           },
           "configurations": {
             "production": {
