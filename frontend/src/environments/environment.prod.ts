@@ -1,1 +1,4 @@
-export const environment = { production: true, backendUrl: '/api' };
+export const environment = {
+  production: true,
+  backendUrl: 'http://backend:8000'
+};

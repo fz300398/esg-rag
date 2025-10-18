@@ -1,0 +1,75 @@
+.login-container {
+  max-width: 400px;
+  margin: 10vh auto;
+  padding: 2rem;
+  border-radius: 16px;
+  box-shadow: 0 0 18px rgba(0, 0, 0, 0.08);
+  text-align: center;
+  background-color: #ffffff;
+  font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+}
+
+.logo {
+  width: 120px;
+  height: auto;
+  margin-bottom: 1rem;
+}
+
+h1 {
+  color: #003f7f; /* THWS Blau */
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+}
+
+label {
+  display: block;
+  text-align: left;
+  margin-top: 1rem;
+  font-weight: 500;
+  color: #222;
+}
+
+input {
+  width: 100%;
+  padding: 0.7rem;
+  margin-top: 0.4rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.2s ease;
+}
+
+input:focus {
+  outline: none;
+  border-color: #005aa7;
+}
+
+button {
+  width: 100%;
+  margin-top: 1.8rem;
+  padding: 0.8rem;
+  background: linear-gradient(90deg, #005aa7, #0076c5);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: background 0.3s ease;
+}
+
+button:hover {
+  background: linear-gradient(90deg, #004b8d, #0068b0);
+}
+
+button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.error {
+  color: #c00;
+  margin-top: 1rem;
+  font-weight: 500;
+}

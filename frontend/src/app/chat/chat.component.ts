@@ -1,35 +1,40 @@
 import { Component } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ChatService } from '../services/chat.service';
 import { AuthService } from '../services/auth.service';
 
 @Component({
   selector: 'app-chat',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
   templateUrl: './chat.component.html',
   styleUrls: ['./chat.component.css']
 })
 export class ChatComponent {
-  messages: { sender: string; text: string }[] = [];
   question = '';
+  messages: { sender: string; text: string }[] = [];
 
   constructor(private chat: ChatService, private auth: AuthService) {}
 
-  sendMessage() {
+  send() {
     if (!this.question.trim()) return;
-    this.messages.push({ sender: 'User', text: this.question });
 
-    this.chat.ask(this.question).subscribe({
-      next: (res) => {
-        this.messages.push({ sender: 'Bot', text: res.answer });
-        this.question = '';
+    const userMessage = this.question;
+    this.messages.push({ sender: 'user', text: userMessage });
+    this.question = '';
+
+    this.chat.ask(userMessage).subscribe({
+      next: (response: any) => {
+        this.messages.push({ sender: 'bot', text: response.answer });
       },
       error: () => {
-        this.messages.push({ sender: 'Bot', text: 'Fehler beim Laden der Antwort.' });
+        this.messages.push({ sender: 'bot', text: 'Fehler beim Abrufen der Antwort.' });
       }
     });
   }
 
   logout() {
     this.auth.logout();
-    window.location.href = '/';
   }
 }

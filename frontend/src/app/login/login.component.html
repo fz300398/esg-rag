@@ -1,5 +1,32 @@
 <div class="login-container">
-  <h2>THWS Login</h2>
-  <p>Bitte melden Sie sich mit Ihrem THWS-Account an.</p>
-  <button (click)="login()">Login über THWS</button>
+  <img src="assets/logo.png" alt="THWS Logo" class="logo" />
+  <h1>THWS ESG Chatbot Login</h1>
+
+  <form (ngSubmit)="login()">
+    <label for="username">Benutzername</label>
+    <input
+      id="username"
+      type="text"
+      [(ngModel)]="username"
+      name="username"
+      required
+      placeholder="z. B. max.mustermann"
+    />
+
+    <label for="password">Passwort</label>
+    <input
+      id="password"
+      type="password"
+      [(ngModel)]="password"
+      name="password"
+      required
+      placeholder="••••••••"
+    />
+
+    <button type="submit" [disabled]="loading">
+      {{ loading ? 'Anmeldung...' : 'Login' }}
+    </button>
+
+    <p *ngIf="error" class="error">{{ error }}</p>
+  </form>
 </div>

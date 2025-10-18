@@ -2,7 +2,7 @@
   "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
   "version": 1,
   "projects": {
-    "frontend": {
+    "esg-frontend": {
       "projectType": "application",
       "root": "",
       "sourceRoot": "src",
@@ -11,28 +11,46 @@
         "build": {
           "builder": "@angular-devkit/build-angular:application",
           "options": {
-            "outputPath": "dist/frontend",
+            "outputPath": "dist/esg-frontend",
             "index": "src/index.html",
-            "main": "src/main.ts",
-            "tsConfig": "tsconfig.json",
-            "assets": ["src/favicon.ico", "src/assets"],
-            "styles": ["src/styles.css"],
+            "browser": "src/main.ts",
+			"tsConfig": "tsconfig.json",
+            "polyfills": [
+              "zone.js"
+            ],
+            "assets": [
+              "src/favicon.ico",
+              "src/assets"
+            ],
+            "styles": [
+              "src/styles.css"
+            ],
             "scripts": []
           },
           "configurations": {
             "production": {
-              "outputHashing": "all"
+              "optimization": true,
+              "extractLicenses": true,
+              "sourceMap": false
             }
           }
         },
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
           "options": {
-            "buildTarget": "frontend:build"
+            "buildTarget": "esg-frontend:build
+          },
+          "configurations": {
+            "production": {
+              "buildTarget": "esg-frontend:build:production"
+            }
           }
         }
       }
     }
   },
-  "defaultProject": "frontend"
+  "defaultProject": "esg-frontend",
+  "cli": {
+    "analytics": "200f6755-2630-4f35-b05a-a3e4ad640c5d"
+  }
 }

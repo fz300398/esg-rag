@@ -1,0 +1,10 @@
+:root {
+  --thws-blue: #004c97;
+  --thws-red: #e63946;
+}
+
+body {
+  margin: 0;
+  background-color: #f8f9fa;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
