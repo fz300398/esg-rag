@@ -10,36 +10,32 @@ from dotenv import load_dotenv, find_dotenv
 import chromadb
 from chromadb.config import Settings as ChromaSettings
 
-# Logging Setup
+# === LOGGING ===
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
 )
 logger = logging.getLogger(__name__)
 
-# Environment Setup
+# === ENVIRONMENT ===
 env_path = find_dotenv(usecwd=True)
 if env_path:
     load_dotenv(env_path)
 else:
-    logger.warning("⚠️ Keine .env-Datei gefunden – Standardwerte werden verwendet.")
+    logger.warning("Keine .env-Datei gefunden – Standardwerte werden verwendet.")
 
 local_path = Path(".env.local")
 if local_path.exists():
     load_dotenv(local_path, override=True)
     logger.info("Lokale .env.local geladen (überschreibt Standardwerte)")
 
-if os.getenv("RUN_ENV") == "local":
-    os.environ.setdefault("OLLAMA_BASE_URL", "http://localhost:11434")
-    os.environ.setdefault("VECTOR_STORE", "chroma")
-
-# Konfiguration
-CHUNK_SIZE = 1000
-CHUNK_OVERLAP = 150
+# === CONFIGURATION ===
+CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", 1000))
+CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", 150))
 CHROMA_DIR = Path(os.getenv("CHROMA_DIR", "chroma"))
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "intfloat/multilingual-e5-base")
 
-# Datenklasse
+# === DATA CLASS ===
 @dataclass
 class Chunk:
     text: str
@@ -48,12 +44,17 @@ class Chunk:
     chunk_id: str
     title: Optional[str] = None
 
-# Text in überlappende Chunks teilen
+# === MODEL (einmal laden) ===
+logger.info(f"Lade Embedding-Modell: {EMBEDDING_MODEL}")
+st_model = SentenceTransformer(EMBEDDING_MODEL)
+
+# === UTILS ===
 def chunk_text(text: str, size: int = CHUNK_SIZE, overlap: int = CHUNK_OVERLAP) -> List[str]:
+    """Teilt Text in überlappende Chunks."""
     text = " ".join((text or "").split())
-    chunks = []
-    start = 0
-    n = len(text)
+    if not text:
+        return []
+    chunks, start, n = [], 0, len(text)
     while start < n:
         end = min(start + size, n)
         chunks.append(text[start:end])
@@ -62,31 +63,27 @@ def chunk_text(text: str, size: int = CHUNK_SIZE, overlap: int = CHUNK_OVERLAP) 
         start = end - overlap
     return chunks
 
-# PDF-Dateien laden & zerlegen
 def load_pdfs(folder: Path) -> List[Chunk]:
+    """Lädt alle PDFs im Ordner und zerlegt sie in Text-Chunks."""
     if not folder.exists():
         logger.error(f"Eingabeordner {folder} existiert nicht.")
         return []
 
     chunks: List[Chunk] = []
-    for pdf_path in sorted(folder.glob("**/*.pdf")):
-        try:
-            logger.info(f"Lese Datei: {pdf_path.name}")
-            reader = PdfReader(str(pdf_path))
-            title = None
+    pdf_files = sorted(folder.glob("**/*.pdf"))
 
-            md = getattr(reader, "metadata", None)
-            if md and isinstance(md, dict) and md.get("title"):
-                title = md.get("title")
-            elif hasattr(md, "title"):
-                title = md.title
+    for pdf_path in pdf_files:
+        logger.info(f"Verarbeite Datei: {pdf_path.name}")
+        try:
+            reader = PdfReader(str(pdf_path))
+            title = getattr(reader.metadata, "title", None) if reader.metadata else None
 
             for page_idx, page in enumerate(reader.pages, start=1):
                 try:
                     text = page.extract_text() or ""
                 except Exception as e:
                     logger.warning(f"Fehler beim Lesen von Seite {page_idx}: {e}")
-                    text = ""
+                    continue
 
                 if not text.strip():
                     continue
@@ -101,50 +98,60 @@ def load_pdfs(folder: Path) -> List[Chunk]:
                             title=title,
                         )
                     )
-
         except Exception as e:
-            logger.error(f"Konnte {pdf_path} nicht verarbeiten: {e}")
+            logger.error(f"Fehler bei {pdf_path.name}: {e}")
 
-    logger.info(f"{len(chunks)} Text-Chunks extrahiert.")
+    logger.info(f"{len(chunks)} Text-Chunks aus {len(pdf_files)} PDFs extrahiert.")
     return chunks
 
-# Chroma Index erstellen
-def build_chroma(chunks: List[Chunk], model_name: str, chroma_dir: Path) -> bool:
+def build_chroma(chunks: List[Chunk], model_name: str, chroma_dir: Path, reset: bool = False) -> bool:
+    """Erstellt oder erweitert den Chroma-Index."""
     try:
         chroma_dir.mkdir(parents=True, exist_ok=True)
-        st = SentenceTransformer(model_name)
+        client = chromadb.PersistentClient(path=str(chroma_dir), settings=ChromaSettings())
 
-        client = chromadb.PersistentClient(path=str(chroma_dir), settings=ChromaSettings(allow_reset=True))
-        client.reset()
+        if reset:
+            logger.warning("Chroma-Speicher wird komplett zurückgesetzt!")
+            client.reset()
+
         coll = client.get_or_create_collection(name="esg_docs", metadata={"hnsw:space": "cosine"})
 
         texts = [c.text for c in chunks]
         ids = [c.chunk_id for c in chunks]
-        metas = [{"source": c.source, "page": c.page, "title": c.title, "chunk_id": c.chunk_id} for c in chunks]
+        metas = [
+            {"source": c.source, "page": c.page, "title": c.title, "chunk_id": c.chunk_id}
+            for c in chunks
+        ]
 
-        embeddings = st.encode(texts, batch_size=32, normalize_embeddings=True, show_progress_bar=True).tolist()
+        logger.info(f"Berechne Embeddings für {len(chunks)} Chunks...")
+        embeddings = st_model.encode(
+            texts, batch_size=32, normalize_embeddings=True, show_progress_bar=True
+        ).tolist()
+
+        logger.info("Füge Daten zur Chroma-Datenbank hinzu...")
         coll.add(ids=ids, documents=texts, metadatas=metas, embeddings=embeddings)
 
-        logger.info(f"Chroma-Index erfolgreich in {chroma_dir} erstellt.")
+        logger.info(f"Chroma-Index in {chroma_dir} aktualisiert.")
         return True
     except Exception as e:
-        logger.error(f"Fehler beim Erstellen des Chroma-Index: {e}")
+        logger.exception("Fehler beim Aufbau des Chroma-Index")
         return False
 
-# Hauptfunktion
+# === MAIN ===
 def main() -> bool:
     parser = argparse.ArgumentParser(description="Ingest ESG-Dokumente in Chroma-Index.")
     parser.add_argument("--input", type=Path, default=Path("data"))
     parser.add_argument("--embedding_model", type=str, default=EMBEDDING_MODEL)
     parser.add_argument("--chroma_dir", type=Path, default=CHROMA_DIR)
+    parser.add_argument("--reset", action="store_true", help="Bestehenden Index löschen")
     args = parser.parse_args()
 
     chunks = load_pdfs(args.input)
     if not chunks:
-        logger.warning("Keine Texte gefunden.")
+        logger.warning("Keine Textinhalte gefunden.")
         return False
 
-    return build_chroma(chunks, args.embedding_model, args.chroma_dir)
+    return build_chroma(chunks, args.embedding_model, args.chroma_dir, reset=args.reset)
 
 if __name__ == "__main__":
     success = main()

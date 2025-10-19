@@ -8,14 +8,14 @@ from dotenv import load_dotenv, find_dotenv
 from rag import answer
 from ingest import load_pdfs, build_chroma
 
-# Logging Setup
+# === LOGGING ===
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
 )
 logger = logging.getLogger("esg-backend")
 
-# Environment Setup
+# === ENVIRONMENT ===
 env_path = find_dotenv(usecwd=True)
 if env_path:
     load_dotenv(env_path)
@@ -25,61 +25,68 @@ if local_path.exists():
     load_dotenv(local_path, override=True)
     logger.info("Lokale .env.local geladen (überschreibt Standardwerte)")
 
-# Standardwerte setzen
-os.environ.setdefault("RUN_ENV", "local")
-os.environ.setdefault("VECTOR_STORE", "chroma")
-os.environ.setdefault("USE_RERANKER", "true")
-
-# Verzeichnisse & Modelle
+# === CONFIG ===
 DATA_DIR = Path(os.getenv("DATA_DIR", "data"))
 CHROMA_DIR = Path(os.getenv("CHROMA_DIR", "chroma"))
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "intfloat/multilingual-e5-base")
 
-# FastAPI Setup
-app = FastAPI(title="ESG Assistant API", version="1.1.0")
+# === FASTAPI ===
+app = FastAPI(title="ESG Assistant API", version="1.2.0")
 
-# CORS (Frontend-Kommunikation zulassen)
+# === CORS (für Frontend) ===
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:4200", "http://127.0.0.1:4200", "*"],  # lokal & dockerisiert
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Models
+# === MODELS ===
 class Query(BaseModel):
     question: str
-# Healthcheck
+
+# === HEALTH ===
 @app.get("/healthz")
 async def healthz():
+    """Healthcheck-Endpunkt."""
     return {
         "ok": True,
         "msg": "Backend läuft!",
-        "reranker_enabled": os.getenv("USE_RERANKER", "true"),
         "embedding_model": EMBEDDING_MODEL,
         "chroma_dir": str(CHROMA_DIR),
     }
 
-# RAG Query
+# === RAG QUERY ===
 @app.post("/query")
 async def query(q: Query):
-    """Verarbeitet eine Benutzerfrage über das RAG-System."""
-    logger.info(f"Neue Anfrage erhalten: {q.question}")
+    """Empfängt eine Frage und liefert Antwort + Quellen."""
+    logger.info(f"Neue Anfrage: {q.question}")
+
     try:
         answer_text, ctx = answer(q.question, top_k=int(os.getenv("TOP_K", 6)))
+
         return {
             "answer": answer_text,
-            "contexts": [c.__dict__ for c in ctx],
+            "sources": [
+                {
+                    "text": c.text[:400] + ("..." if len(c.text) > 400 else ""),
+                    "source": c.source,
+                    "page": c.page,
+                    "chunk_id": c.chunk_id,
+                }
+                for c in ctx
+            ],
         }
-    except Exception as e:
-        logger.error(f"Fehler bei der Verarbeitung: {e}")
-        raise HTTPException(status_code=500, detail="Fehler bei der Anfrageverarbeitung.")
 
-# PDF Upload & Index Update
+    except Exception as e:
+        logger.exception("Fehler bei der Verarbeitung der Anfrage")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# === UPLOAD & INDEX ===
 @app.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
-    """Lädt ein ESG-PDF hoch und aktualisiert den Chroma-Index."""
+    """Lädt eine PDF hoch und aktualisiert den Chroma-Index."""
     try:
         DATA_DIR.mkdir(parents=True, exist_ok=True)
         target_path = DATA_DIR / file.filename
@@ -87,24 +94,21 @@ async def upload_file(file: UploadFile = File(...)):
         with open(target_path, "wb") as f:
             f.write(await file.read())
 
-        logger.info(f"Datei '{file.filename}' erfolgreich hochgeladen.")
+        logger.info(f"Datei '{file.filename}' hochgeladen.")
 
         chunks = load_pdfs(DATA_DIR)
         if not chunks:
             raise HTTPException(status_code=400, detail="Keine Textinhalte im PDF gefunden.")
 
-        success = build_chroma(chunks, EMBEDDING_MODEL, CHROMA_DIR)
-        if not success:
-            raise HTTPException(status_code=500, detail="Fehler beim Aktualisieren des Index.")
-
+        build_chroma(chunks, EMBEDDING_MODEL, CHROMA_DIR)
         logger.info("Index erfolgreich aktualisiert.")
-        return {"ok": True, "msg": f"Datei '{file.filename}' hochgeladen und Index aktualisiert."}
+        return {"ok": True, "msg": f"Datei '{file.filename}' wurde indexiert."}
 
     except Exception as e:
-        logger.error(f"Upload/Indexierung fehlgeschlagen: {e}")
+        logger.exception("Fehler beim Upload oder Indexaufbau")
         raise HTTPException(status_code=500, detail=f"Fehler: {str(e)}")
 
-# Root Endpoint
+# === ROOT ===
 @app.get("/")
 async def root():
     return {
