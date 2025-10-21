@@ -1,3 +1,4 @@
+/* === Container === */
 .chat-container {
   display: flex;
   flex-direction: column;
@@ -11,7 +12,7 @@
   overflow: hidden;
 }
 
-/* Header */
+/* === Header === */
 .chat-header {
   display: flex;
   justify-content: space-between;
@@ -33,6 +34,31 @@
   width: auto;
 }
 
+/* === Header Actions (Upload + Logout) === */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Upload Button */
+.upload-btn {
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 14px;
+  transition: background 0.2s;
+}
+
+.upload-btn:hover {
+  background: #006ad1;
+}
+
+/* Logout Button */
 .logout-btn {
   background: #e63946;
   color: white;
@@ -48,7 +74,7 @@
   background: #b71c1c;
 }
 
-/* Chat window */
+/* === Chat Window === */
 .chat-window {
   flex: 1;
   overflow-y: auto;
@@ -57,8 +83,10 @@
   flex-direction: column;
   gap: 12px;
   scroll-behavior: smooth;
+  background-color: #f9f9fb;
 }
 
+/* Messages */
 .message {
   display: flex;
   width: 100%;
@@ -79,6 +107,7 @@
   line-height: 1.5;
   font-size: 14px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  word-wrap: break-word;
 }
 
 .user-msg .msg-bubble {
@@ -93,7 +122,7 @@
   border-bottom-left-radius: 3px;
 }
 
-/* Input */
+/* === Input Section === */
 .chat-input {
   display: flex;
   border-top: 1px solid #ddd;
@@ -119,6 +148,7 @@ textarea:focus {
   box-shadow: 0 0 5px rgba(0, 76, 151, 0.3);
 }
 
+/* Send Button */
 button[type='submit'] {
   background-color: #004c97;
   color: white;
@@ -136,7 +166,7 @@ button[type='submit']:hover {
   background-color: #006ad1;
 }
 
-/* Scrollbar styling */
+/* === Scrollbar Styling === */
 .chat-window::-webkit-scrollbar {
   width: 8px;
 }
@@ -146,7 +176,7 @@ button[type='submit']:hover {
   border-radius: 4px;
 }
 
-/* Mobile Optimierung */
+/* === Mobile Optimization === */
 @media (max-width: 600px) {
   .chat-container {
     border: none;
@@ -165,5 +195,15 @@ button[type='submit']:hover {
 
   textarea {
     font-size: 13px;
+  }
+
+  .upload-btn,
+  .logout-btn {
+    font-size: 12px;
+    padding: 5px 10px;
+  }
+
+  .header-actions {
+    gap: 8px;
   }
 }

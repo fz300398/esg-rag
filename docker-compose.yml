@@ -1,14 +1,13 @@
-﻿version: "3.9"
-
-services:
+﻿services:
   backend:
     build:
       context: ./backend
     container_name: esg-backend
+    working_dir: /backend
     ports:
       - "8000:8000"
     volumes:
-      - ./backend:/app
+      - ./backend:/backend
     env_file:
       - ./backend/.env
     networks:

@@ -37,4 +37,27 @@ export class ChatComponent {
   logout() {
     this.auth.logout();
   }
+  
+  onFileSelected(event: any) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    this.chat.uploadFile(formData).subscribe({
+      next: () => {
+        this.messages.push({
+          text: `Die Datei "${file.name}" wurde erfolgreich hochgeladen.`,
+          sender: 'bot'
+        });
+      },
+      error: () => {
+        this.messages.push({
+          text: `Fehler beim Hochladen der Datei "${file.name}".`,
+          sender: 'bot'
+        });
+      }
+    });
+  }
 }

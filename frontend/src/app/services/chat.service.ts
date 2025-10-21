@@ -5,9 +5,17 @@ import { Observable } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class ChatService {
+  private apiUrl = environment.backendUrl;
+
   constructor(private http: HttpClient) {}
 
+  // Anfrage an das Chat-Backend
   ask(question: string): Observable<any> {
-    return this.http.post(`${environment.backendUrl}/query`, { question });
+    return this.http.post(`${this.apiUrl}/query`, { question });
+  }
+
+  // Datei-Upload an das Backend
+  uploadFile(formData: FormData): Observable<any> {
+    return this.http.post(`${this.apiUrl}/upload`, formData);
   }
 }

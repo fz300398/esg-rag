@@ -34,9 +34,15 @@ EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "intfloat/multilingual-e5-base")
 app = FastAPI(title="ESG Assistant API", version="1.2.0")
 
 # === CORS (für Frontend) ===
+origins = [
+    "http://localhost:4200",
+    "http://127.0.0.1:4200",
+    "http://esg-frontend:4200" 
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:4200", "http://127.0.0.1:4200", "*"],  # lokal & dockerisiert
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

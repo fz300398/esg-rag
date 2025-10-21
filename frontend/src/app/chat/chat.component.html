@@ -4,13 +4,30 @@
       <img src="assets/logo.png" alt="THWS Logo" class="thws-logo" />
       <h2>ESG Chatbot</h2>
     </div>
-    <button class="logout-btn" (click)="logout()">Abmelden</button>
+
+    <div class="header-actions">
+      <!-- Upload -->
+      <label for="fileInput" class="upload-btn">Datei hochladen</label>
+      <input
+        type="file"
+        id="fileInput"
+        accept=".pdf"
+        (change)="onFileSelected($event)"
+        hidden
+      />
+
+      <!-- Logout -->
+      <button class="logout-btn" (click)="logout()">Abmelden</button>
+    </div>
   </header>
 
   <div class="chat-window">
     <div
       *ngFor="let msg of messages"
-      [ngClass]="{ 'user-msg': msg.sender === 'user', 'bot-msg': msg.sender === 'bot' }"
+      [ngClass]="{
+        'user-msg': msg.sender === 'user',
+        'bot-msg': msg.sender === 'bot'
+      }"
       class="message"
     >
       <div class="msg-bubble">
