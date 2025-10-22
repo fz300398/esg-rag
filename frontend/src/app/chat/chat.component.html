@@ -6,7 +6,6 @@
     </div>
 
     <div class="header-actions">
-      <!-- Upload -->
       <label for="fileInput" class="upload-btn">Datei hochladen</label>
       <input
         type="file"
@@ -15,19 +14,14 @@
         (change)="onFileSelected($event)"
         hidden
       />
-
-      <!-- Logout -->
       <button class="logout-btn" (click)="logout()">Abmelden</button>
     </div>
   </header>
 
-  <div class="chat-window">
+  <div class="chat-window" #chatWindow>
     <div
       *ngFor="let msg of messages"
-      [ngClass]="{
-        'user-msg': msg.sender === 'user',
-        'bot-msg': msg.sender === 'bot'
-      }"
+      [ngClass]="{ 'user-msg': msg.sender === 'user', 'bot-msg': msg.sender === 'bot' }"
       class="message"
     >
       <div class="msg-bubble">
@@ -43,7 +37,11 @@
       placeholder="Stelle eine ESG-bezogene Frage..."
       rows="2"
       required
+      (keydown)="onKeyDown($event)"
     ></textarea>
-    <button type="submit">Senden</button>
+
+    <button type="submit" [disabled]="loading || !question.trim()">
+      {{ loading ? '…' : 'Senden' }}
+    </button>
   </form>
 </div>

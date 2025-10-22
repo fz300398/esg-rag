@@ -1,7 +1,7 @@
-import os, json, logging
+import os, logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 import chromadb
 import numpy as np
 import requests
@@ -73,7 +73,7 @@ def query_ollama(prompt: str) -> str:
         r = requests.post(
             f"{OLLAMA_BASE_URL}/api/generate",
             json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": OLLAMA_STREAM},
-            timeout=120,
+            timeout=300,
         )
         r.raise_for_status()
         response = r.json().get("response", "").strip()
@@ -83,34 +83,57 @@ def query_ollama(prompt: str) -> str:
         logger.error(f"Ollama request failed: {e}")
         return "Beim Abrufen der Antwort vom LLM ist ein Fehler aufgetreten."
         
-def answer(question: str, top_k: int = 6, fallback_threshold: int = 2) -> Tuple[str, List[Retrieved]]:
-    """Hauptfunktion: kombiniert Retrieval, Reranking und Antwortgenerierung."""
-    logger.info(f"Received question: {question}")
+def answer(question: str, top_k: int = 6, fallback_threshold: int = 2, history: Optional[str] = None) -> Tuple[str, List[Retrieved], float]:
+    logger.info(f"Neue Frage: {question}")
 
+    # Dokumente abrufen
     ctx = retrieve(question, k=top_k * 2, min_results=fallback_threshold)
 
-    # === Fallback: Kein Kontext gefunden ===
+    # Fallback auf reines LLM, falls kein Kontext
     if not ctx:
         logger.info("Kein Kontext gefunden. Fallback auf reines LLM aktiviert.")
-        fallback_prompt = (
-            f"Beantworte die folgende Frage zum Thema ESG so präzise und informativ wie möglich:\n\n"
-            f"Frage: {question}\n\nAntwort:"
-        )
-        return query_ollama(fallback_prompt), []
 
-    # === Reranking ===
+        fallback_prompt = "Du bist ein ESG-Assistent. "
+        fallback_prompt += "Wenn du keine Quellen findest, gib dein bestes Wissen an "
+        fallback_prompt += "und frage ggf. nach, falls du etwas präzisieren musst.\n\n"
+
+        if history:
+            fallback_prompt += "Vorheriger Verlauf:\n" + history + "\n\n"
+
+        fallback_prompt += f"Frage: {question}\n\nAntwort:"
+
+        response = query_ollama(fallback_prompt)
+        return response, [], 0.0  # Keine Confidence bei Fallback
+
+    # Relevanzbewertung (Reranking)
     pairs = [(question, c.text) for c in ctx]
     scores = reranker.predict(pairs).tolist()
     order = sorted(range(len(ctx)), key=lambda i: scores[i], reverse=True)
     ctx = [ctx[i] for i in order[:top_k]]
 
-    # === Kontextualisierter Prompt ===
-    context_text = "\n---\n".join(c.text for c in ctx)
-    prompt = (
-        f"Frage: {question}\n\n"
-        f"Kontext (Ausschnitte aus ESG-Dokumenten):\n{context_text}\n\n"
-        f"Formuliere eine strukturierte, gut verständliche Antwort basierend auf diesem Kontext.\n\nAntwort:"
-    )
+    # Confidence berechnen
+    confidence = float(np.mean(scores[:top_k])) if scores else 0.0
 
+    # Kontextualisierten Prompt zusammenbauen
+    prompt_parts = [
+        "Du bist ein ESG-Assistent. Nutze die folgenden Dokumentenausschnitte, um eine sachliche Antwort zu geben.",
+        "Falls der Nutzer unklare oder mehrdeutige Fragen stellt, bitte freundlich um Präzisierung.",
+        ""
+    ]
+
+    if history:
+        prompt_parts.append("Vorheriger Verlauf:\n" + history)
+        prompt_parts.append("")
+
+    prompt_parts.append(f"Frage: {question}")
+    prompt_parts.append("")
+    prompt_parts.append("Relevante ESG-Kontexte:\n" + "\n---\n".join(c.text for c in ctx))
+    prompt_parts.append("")
+    prompt_parts.append("Antwort:")
+
+    prompt = "\n".join(prompt_parts)
+
+    # Anfrage an LLM
     response = query_ollama(prompt)
-    return response, ctx
+
+    return response, ctx, confidence

@@ -7,6 +7,8 @@ from pydantic import BaseModel
 from dotenv import load_dotenv, find_dotenv
 from rag import answer
 from ingest import load_pdfs, build_chroma
+from typing import Dict, List
+import uuid
 
 # === LOGGING ===
 logging.basicConfig(
@@ -33,6 +35,9 @@ EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "intfloat/multilingual-e5-base")
 # === FASTAPI ===
 app = FastAPI(title="ESG Assistant API", version="1.2.0")
 
+# === Simple in-memory session store ===
+session_store: Dict[str, List[Dict[str, str]]] = {}
+
 # === CORS (für Frontend) ===
 origins = [
     "http://localhost:4200",
@@ -50,6 +55,7 @@ app.add_middleware(
 
 # === MODELS ===
 class Query(BaseModel):
+    session_id: str | None = None
     question: str
 
 # === HEALTH ===
@@ -66,14 +72,34 @@ async def healthz():
 # === RAG QUERY ===
 @app.post("/query")
 async def query(q: Query):
-    """Empfängt eine Frage und liefert Antwort + Quellen."""
+    """Empfängt eine Frage, verarbeitet sie kontextsensitiv und liefert Antwort + Quellen."""
     logger.info(f"Neue Anfrage: {q.question}")
 
     try:
-        answer_text, ctx = answer(q.question, top_k=int(os.getenv("TOP_K", 6)))
+        # Session-ID prüfen oder neu erzeugen
+        session_id = q.session_id or str(uuid.uuid4())
 
+        # Verlauf aus Speicher holen
+        history = session_store.get(session_id, [])
+
+        # Kontext aus bisherigen Nachrichten extrahieren
+        context_text = "\n".join([
+            f"{m['role'].capitalize()}: {m['content']}" for m in history[-5:]
+        ])
+
+        # RAG-Antwort mit Kontext holen
+        answer_text, ctx, confidence = answer(q.question, history=context_text)
+
+        # Verlauf aktualisieren
+        history.append({"role": "user", "content": q.question})
+        history.append({"role": "assistant", "content": answer_text})
+        session_store[session_id] = history
+
+        # Antwort zurückgeben
         return {
+            "session_id": session_id,
             "answer": answer_text,
+            "confidence": confidence,
             "sources": [
                 {
                     "text": c.text[:400] + ("..." if len(c.text) > 400 else ""),
