@@ -63,6 +63,7 @@ def chunk_text(text: str, size: int = CHUNK_SIZE, overlap: int = CHUNK_OVERLAP) 
         start = end - overlap
     return chunks
 
+
 def load_pdfs(folder: Path) -> List[Chunk]:
     """Lädt alle PDFs im Ordner und zerlegt sie in Text-Chunks."""
     if not folder.exists():
@@ -82,7 +83,7 @@ def load_pdfs(folder: Path) -> List[Chunk]:
                 try:
                     text = page.extract_text() or ""
                 except Exception as e:
-                    logger.warning(f"Fehler beim Lesen von Seite {page_idx}: {e}")
+                    logger.warning(f"Fehler beim Lesen von Seite {page_idx} in {pdf_path.name}: {e}")
                     continue
 
                 if not text.strip():
@@ -104,8 +105,9 @@ def load_pdfs(folder: Path) -> List[Chunk]:
     logger.info(f"{len(chunks)} Text-Chunks aus {len(pdf_files)} PDFs extrahiert.")
     return chunks
 
+
 def build_chroma(chunks: List[Chunk], model_name: str, chroma_dir: Path, reset: bool = False) -> bool:
-    """Erstellt oder erweitert den Chroma-Index."""
+    """Erstellt oder erweitert den Chroma-Index mit Duplikatsschutz."""
     try:
         chroma_dir.mkdir(parents=True, exist_ok=True)
         client = chromadb.PersistentClient(path=str(chroma_dir), settings=ChromaSettings())
@@ -116,26 +118,33 @@ def build_chroma(chunks: List[Chunk], model_name: str, chroma_dir: Path, reset: 
 
         coll = client.get_or_create_collection(name="esg_docs", metadata={"hnsw:space": "cosine"})
 
-        texts = [c.text for c in chunks]
-        ids = [c.chunk_id for c in chunks]
+        existing_ids = set(coll.get()["ids"]) if coll.count() > 0 else set()
+        new_chunks = [c for c in chunks if c.chunk_id not in existing_ids]
+
+        if not new_chunks:
+            logger.info("Keine neuen Chunks zum Hinzufügen (alles bereits indexiert).")
+            return True
+
+        texts = [c.text for c in new_chunks]
+        ids = [c.chunk_id for c in new_chunks]
         metas = [
             {"source": c.source, "page": c.page, "title": c.title, "chunk_id": c.chunk_id}
-            for c in chunks
+            for c in new_chunks
         ]
 
-        logger.info(f"Berechne Embeddings für {len(chunks)} Chunks...")
+        logger.info(f"Berechne Embeddings für {len(new_chunks)} neue Chunks...")
         embeddings = st_model.encode(
             texts, batch_size=32, normalize_embeddings=True, show_progress_bar=True
         ).tolist()
 
-        logger.info("Füge Daten zur Chroma-Datenbank hinzu...")
         coll.add(ids=ids, documents=texts, metadatas=metas, embeddings=embeddings)
 
-        logger.info(f"Chroma-Index in {chroma_dir} aktualisiert.")
+        logger.info(f"Chroma-Index in {chroma_dir} um {len(new_chunks)} neue Chunks erweitert.")
         return True
     except Exception as e:
         logger.exception("Fehler beim Aufbau des Chroma-Index")
         return False
+
 
 # === MAIN ===
 def main() -> bool:

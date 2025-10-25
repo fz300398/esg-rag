@@ -117,24 +117,37 @@ async def query(q: Query):
 
 # === UPLOAD & INDEX ===
 @app.post("/upload")
-async def upload_file(file: UploadFile = File(...)):
-    """Lädt eine PDF hoch und aktualisiert den Chroma-Index."""
+async def upload_files(files: List[UploadFile] = File(...)):
+    """Lädt mehrere PDF-Dateien hoch und aktualisiert den Chroma-Index."""
     try:
         DATA_DIR.mkdir(parents=True, exist_ok=True)
-        target_path = DATA_DIR / file.filename
+        saved_files = []
 
-        with open(target_path, "wb") as f:
-            f.write(await file.read())
+        # Speichere jede hochgeladene Datei
+        for file in files:
+            if not file.filename.lower().endswith(".pdf"):
+                raise HTTPException(status_code=400, detail=f"Ungültige Datei: {file.filename}")
+            
+            target_path = DATA_DIR / file.filename
+            with open(target_path, "wb") as f:
+                f.write(await file.read())
 
-        logger.info(f"Datei '{file.filename}' hochgeladen.")
+            logger.info(f"Datei '{file.filename}' erfolgreich hochgeladen.")
+            saved_files.append(file.filename)
 
+        # PDFs einlesen und in Chroma einfügen
         chunks = load_pdfs(DATA_DIR)
         if not chunks:
-            raise HTTPException(status_code=400, detail="Keine Textinhalte im PDF gefunden.")
+            raise HTTPException(status_code=400, detail="Keine Textinhalte in den PDFs gefunden.")
 
         build_chroma(chunks, EMBEDDING_MODEL, CHROMA_DIR)
-        logger.info("Index erfolgreich aktualisiert.")
-        return {"ok": True, "msg": f"Datei '{file.filename}' wurde indexiert."}
+        logger.info(f"Index erfolgreich mit {len(saved_files)} Datei(en) aktualisiert.")
+
+        return {
+            "ok": True,
+            "msg": f"{len(saved_files)} Datei(en) wurden indexiert.",
+            "files": saved_files
+        }
 
     except Exception as e:
         logger.exception("Fehler beim Upload oder Indexaufbau")

@@ -58,6 +58,28 @@
   background: #006ad1;
 }
 
+/* Neuer "Index aktualisieren" Button */
+.upload-confirm-btn {
+  background: #28a745;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 14px;
+  transition: background 0.2s;
+}
+
+.upload-confirm-btn:hover {
+  background: #218838;
+}
+
+.upload-confirm-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* Logout Button */
 .logout-btn {
   background: #e63946;
@@ -121,6 +143,29 @@
   background-color: #e9eef6;
   color: #333;
   border-bottom-left-radius: 3px;
+}
+
+/* === Quellenanzeige (neu) === */
+.sources {
+  font-size: 0.8rem;
+  color: #555;
+  margin-top: 8px;
+  border-top: 1px solid #d0d0d0;
+  padding-top: 4px;
+  line-height: 1.4;
+}
+
+.sources strong {
+  color: #333;
+}
+
+.sources ul {
+  margin: 4px 0 0 1rem;
+  padding: 0;
+}
+
+.sources li {
+  list-style-type: disc;
 }
 
 /* === Input Section === */
@@ -199,6 +244,7 @@ button[type='submit']:hover {
   }
 
   .upload-btn,
+  .upload-confirm-btn,
   .logout-btn {
     font-size: 12px;
     padding: 5px 10px;
@@ -206,5 +252,9 @@ button[type='submit']:hover {
 
   .header-actions {
     gap: 8px;
+  }
+
+  .sources {
+    font-size: 0.75rem;
   }
 }

@@ -10,15 +10,20 @@ export class ChatService {
 
   constructor(private http: HttpClient, private auth: AuthService) {}
 
-  ask(payload: { question: string; session_id: string }): Observable<any> {
+	ask(payload: { question: string; session_id: string }): Observable<any> {
       const headers = this._getAuthHeaders();
       return this.http.post(`${this.apiUrl}/query`, payload, { headers });
     }
 
-    uploadFile(formData: FormData): Observable<any> {
-      const headers = this._getAuthHeaders();
-      return this.http.post(`${this.apiUrl}/upload`, formData, { headers });
-    }
+	uploadFiles(files: FileList): Observable<any> {
+	  const formData = new FormData();
+	  for (let i = 0; i < files.length; i++) {
+		formData.append('files', files[i], files[i].name);
+	  }
+
+	  const headers = this._getAuthHeaders();
+	  return this.http.post(`${this.apiUrl}/upload`, formData, { headers });
+	}
 
     private _getAuthHeaders(): HttpHeaders {
       const token = this.auth.getToken();

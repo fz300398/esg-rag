@@ -93,9 +93,11 @@ def answer(question: str, top_k: int = 6, fallback_threshold: int = 2, history: 
     if not ctx:
         logger.info("Kein Kontext gefunden. Fallback auf reines LLM aktiviert.")
 
-        fallback_prompt = "Du bist ein ESG-Assistent. "
-        fallback_prompt += "Wenn du keine Quellen findest, gib dein bestes Wissen an "
-        fallback_prompt += "und frage ggf. nach, falls du etwas präzisieren musst.\n\n"
+        fallback_prompt = (
+            "Du bist ein ESG-Assistent. "
+            "Wenn du keine Quellen findest, gib dein bestes Wissen an "
+            "und bitte den Nutzer um Präzisierung, falls nötig.\n\n"
+        )
 
         if history:
             fallback_prompt += "Vorheriger Verlauf:\n" + history + "\n\n"
@@ -105,7 +107,7 @@ def answer(question: str, top_k: int = 6, fallback_threshold: int = 2, history: 
         response = query_ollama(fallback_prompt)
         return response, [], 0.0  # Keine Confidence bei Fallback
 
-    # Relevanzbewertung (Reranking)
+    # Reranking nach Relevanz
     pairs = [(question, c.text) for c in ctx]
     scores = reranker.predict(pairs).tolist()
     order = sorted(range(len(ctx)), key=lambda i: scores[i], reverse=True)
@@ -113,11 +115,25 @@ def answer(question: str, top_k: int = 6, fallback_threshold: int = 2, history: 
 
     # Confidence berechnen
     confidence = float(np.mean(scores[:top_k])) if scores else 0.0
+    
+    # Doppelte Quellen entfernen und sortieren ===
+    unique_sources = []
+    for src in ctx:
+        entry = (src.source, src.page)
+        if entry not in unique_sources:
+            unique_sources.append(entry)
+        
+    # Quellenliste formatieren
+    source_list = [
+        f"- {c.source} (Seite {c.page})"
+        for c in ctx
+        if c.source != "?"
+    ]
 
-    # Kontextualisierten Prompt zusammenbauen
+    # Prompt zusammenbauen
     prompt_parts = [
         "Du bist ein ESG-Assistent. Nutze die folgenden Dokumentenausschnitte, um eine sachliche Antwort zu geben.",
-        "Falls der Nutzer unklare oder mehrdeutige Fragen stellt, bitte freundlich um Präzisierung.",
+        "Wenn du Informationen nutzt, gib bitte am Ende deiner Antwort an, aus welchen Dokumenten (Quelle + Seite) sie stammen.",
         ""
     ]
 
@@ -125,11 +141,12 @@ def answer(question: str, top_k: int = 6, fallback_threshold: int = 2, history: 
         prompt_parts.append("Vorheriger Verlauf:\n" + history)
         prompt_parts.append("")
 
-    prompt_parts.append(f"Frage: {question}")
-    prompt_parts.append("")
-    prompt_parts.append("Relevante ESG-Kontexte:\n" + "\n---\n".join(c.text for c in ctx))
-    prompt_parts.append("")
-    prompt_parts.append("Antwort:")
+    prompt_parts.append(f"Frage: {question}\n")
+    prompt_parts.append("Relevante ESG-Kontexte:")
+    for i, c in enumerate(ctx, 1):
+        prompt_parts.append(f"\n--- [Dokument {i}] Quelle: {c.source}, Seite {c.page} ---\n{c.text}")
+
+    prompt_parts.append("\nAntwort:")
 
     prompt = "\n".join(prompt_parts)
 

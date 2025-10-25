@@ -7,6 +7,7 @@ import { AuthService } from '../services/auth.service';
 interface Message {
   sender: 'user' | 'bot';
   text: string;
+  sources?: { source: string; page: number }[]; // Quellenanzeige
 }
 
 @Component({
@@ -23,6 +24,7 @@ export class ChatComponent {
   question = '';
   messages: Message[] = [];
   loading = false;
+  selectedFiles: FileList | null = null;
 
   constructor(private chat: ChatService, private auth: AuthService) {}
 
@@ -32,9 +34,7 @@ export class ChatComponent {
 
   onKeyDown(e: KeyboardEvent): void {
     if (e.key === 'Enter') {
-      // Shift+Enter = neuer Zeilenumbruch
       if (e.shiftKey) return;
-      // Enter = senden
       e.preventDefault();
       this.send();
     }
@@ -42,7 +42,6 @@ export class ChatComponent {
 
   private pushAndScroll(msg: Message) {
     this.messages.push(msg);
-    // Scroll ans Ende (kleines Timeout bis DOM gerendert ist)
     setTimeout(() => {
       if (this.chatWindow?.nativeElement) {
         const el = this.chatWindow.nativeElement;
@@ -54,14 +53,9 @@ export class ChatComponent {
   send(): void {
     const prompt = this.question.trim();
     if (!prompt || this.loading) return;
-
-    // Sofort Eingabe leeren
     this.question = '';
-
-    // User-Nachricht anzeigen
     this.pushAndScroll({ sender: 'user', text: prompt });
 
-    // Request vorbereiten
     const payload = {
       question: prompt,
       session_id: this.sessionId
@@ -70,7 +64,12 @@ export class ChatComponent {
     this.loading = true;
     this.chat.ask(payload).subscribe({
       next: (response: any) => {
-        this.pushAndScroll({ sender: 'bot', text: response?.answer ?? 'Keine Antwort erhalten.' });
+        // Quellen aus Backend übernehmen
+        this.pushAndScroll({
+          sender: 'bot',
+          text: response?.answer ?? 'Keine Antwort erhalten.',
+          sources: response?.sources ?? []
+        });
         this.loading = false;
       },
       error: (err) => {
@@ -81,27 +80,27 @@ export class ChatComponent {
     });
   }
 
-  onFileSelected(event: any): void {
-    const file = event?.target?.files?.[0];
-    if (!file || this.loading) return;
+  onFilesSelected(event: any): void {
+    this.selectedFiles = event?.target?.files ?? null;
+  }
 
-    const formData = new FormData();
-    formData.append('file', file);
+  uploadFiles(): void {
+    if (!this.selectedFiles || this.loading) return;
 
     this.loading = true;
-    this.chat.uploadFile(formData).subscribe({
-      next: () => {
+    this.chat.uploadFiles(this.selectedFiles).subscribe({
+      next: (res) => {
+        const count = res?.files?.length ?? this.selectedFiles?.length;
         this.pushAndScroll({
           sender: 'bot',
-          text: `Die Datei "${file.name}" wurde erfolgreich hochgeladen.`
+          text: `${count} Datei(en) erfolgreich hochgeladen und indexiert.`
         });
         this.loading = false;
+        this.selectedFiles = null;
       },
-      error: () => {
-        this.pushAndScroll({
-          sender: 'bot',
-          text: `Fehler beim Hochladen der Datei "${file.name}".`
-        });
+      error: (err) => {
+        console.error('Upload-Fehler:', err);
+        this.pushAndScroll({ sender: 'bot', text: 'Fehler beim Upload der Dateien.' });
         this.loading = false;
       }
     });

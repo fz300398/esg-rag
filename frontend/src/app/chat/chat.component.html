@@ -6,14 +6,24 @@
     </div>
 
     <div class="header-actions">
-      <label for="fileInput" class="upload-btn">Datei hochladen</label>
+      <label for="fileInput" class="upload-btn">Dateien hochladen</label>
       <input
         type="file"
         id="fileInput"
         accept=".pdf"
-        (change)="onFileSelected($event)"
+        multiple
+        (change)="onFilesSelected($event)"
         hidden
       />
+
+      <button
+        class="upload-confirm-btn"
+        (click)="uploadFiles()"
+        [disabled]="loading || !selectedFiles"
+      >
+        {{ loading ? 'Wird verarbeitet…' : 'Index aktualisieren' }}
+      </button>
+
       <button class="logout-btn" (click)="logout()">Abmelden</button>
     </div>
   </header>
@@ -21,11 +31,26 @@
   <div class="chat-window" #chatWindow>
     <div
       *ngFor="let msg of messages"
-      [ngClass]="{ 'user-msg': msg.sender === 'user', 'bot-msg': msg.sender === 'bot' }"
+      [ngClass]="{
+        'user-msg': msg.sender === 'user',
+        'bot-msg': msg.sender === 'bot'
+      }"
       class="message"
     >
       <div class="msg-bubble">
         <p>{{ msg.text }}</p>
+
+        <div
+          *ngIf="msg.sender === 'bot' && msg.sources?.length"
+          class="sources"
+        >
+          <strong>Quellen:</strong>
+          <ul>
+            <li *ngFor="let s of msg.sources">
+              {{ s.source }} (Seite {{ s.page }})
+            </li>
+          </ul>
+        </div>
       </div>
     </div>
   </div>
