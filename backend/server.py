@@ -10,14 +10,14 @@ from ingest import load_pdfs, build_chroma
 from typing import Dict, List
 import uuid
 
-# === LOGGING ===
+# LOGGING
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
 )
 logger = logging.getLogger("esg-backend")
 
-# === ENVIRONMENT ===
+# ENVIRONMENT
 env_path = find_dotenv(usecwd=True)
 if env_path:
     load_dotenv(env_path)
@@ -27,18 +27,17 @@ if local_path.exists():
     load_dotenv(local_path, override=True)
     logger.info("Lokale .env.local geladen (überschreibt Standardwerte)")
 
-# === CONFIG ===
+# CONFIG
 DATA_DIR = Path(os.getenv("DATA_DIR", "data"))
 CHROMA_DIR = Path(os.getenv("CHROMA_DIR", "chroma"))
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "intfloat/multilingual-e5-base")
 
-# === FASTAPI ===
+# FASTAPI
 app = FastAPI(title="ESG Assistant API", version="1.2.0")
 
-# === Simple in-memory session store ===
 session_store: Dict[str, List[Dict[str, str]]] = {}
 
-# === CORS (für Frontend) ===
+# CORS (für Frontend)
 origins = [
     "http://localhost:4200",
     "http://127.0.0.1:4200",
@@ -53,12 +52,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# === MODELS ===
+# MODELS
 class Query(BaseModel):
     session_id: str | None = None
     question: str
 
-# === HEALTH ===
+# HEALTH
 @app.get("/healthz")
 async def healthz():
     """Healthcheck-Endpunkt."""
@@ -69,7 +68,7 @@ async def healthz():
         "chroma_dir": str(CHROMA_DIR),
     }
 
-# === RAG QUERY ===
+# RAG QUERY
 @app.post("/query")
 async def query(q: Query):
     """Empfängt eine Frage, verarbeitet sie kontextsensitiv und liefert Antwort + Quellen."""
@@ -115,7 +114,7 @@ async def query(q: Query):
         logger.exception("Fehler bei der Verarbeitung der Anfrage")
         raise HTTPException(status_code=500, detail=str(e))
 
-# === UPLOAD & INDEX ===
+# UPLOAD & INDEX
 @app.post("/upload")
 async def upload_files(files: List[UploadFile] = File(...)):
     """Lädt mehrere PDF-Dateien hoch und aktualisiert den Chroma-Index."""
@@ -153,7 +152,7 @@ async def upload_files(files: List[UploadFile] = File(...)):
         logger.exception("Fehler beim Upload oder Indexaufbau")
         raise HTTPException(status_code=500, detail=f"Fehler: {str(e)}")
 
-# === ROOT ===
+# ROOT
 @app.get("/")
 async def root():
     return {

@@ -8,7 +8,7 @@ import requests
 from chromadb.config import Settings as ChromaSettings
 from sentence_transformers import SentenceTransformer, CrossEncoder
 
-# === CONFIGURATION ===
+# CONFIGURATION
 CHROMA_DIR = Path(os.getenv("CHROMA_DIR", "/app/chroma"))
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "intfloat/multilingual-e5-base")
 RERANKER_MODEL = os.getenv("RERANKER_MODEL", "BAAI/bge-reranker-v2-m3")
@@ -16,24 +16,23 @@ OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "phi3:mini")
 OLLAMA_STREAM = os.getenv("OLLAMA_STREAM", "false").lower() == "true"
 
-# === LOGGING ===
+# LOGGING
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# === MODEL LOADING (only once) ===
 logger.info("Loading embedding model...")
 st_model = SentenceTransformer(EMBEDDING_MODEL)
 logger.info("Loading reranker model...")
 reranker = CrossEncoder(RERANKER_MODEL)
 
-# === CHROMA CLIENT ===
+# CHROMA CLIENT
 def load_chroma(chroma_dir: Path):
     client = chromadb.PersistentClient(path=str(chroma_dir), settings=ChromaSettings())
     return client.get_or_create_collection(name="esg_docs", metadata={"hnsw:space": "cosine"})
 
 collection = load_chroma(CHROMA_DIR)
 
-# === DATA STRUCTURES ===
+# DATA CLASS
 @dataclass
 class Retrieved:
     text: str
@@ -41,7 +40,7 @@ class Retrieved:
     page: int
     chunk_id: str
 
-# === CORE FUNCTIONS ===
+# CORE FUNCTIONS
 def embed_query(query: str) -> np.ndarray:
     """Wandelt die Nutzerfrage in einen semantischen Vektor um."""
     return st_model.encode([query], normalize_embeddings=True)[0].astype("float32")
@@ -116,7 +115,7 @@ def answer(question: str, top_k: int = 6, fallback_threshold: int = 2, history: 
     # Confidence berechnen
     confidence = float(np.mean(scores[:top_k])) if scores else 0.0
     
-    # Doppelte Quellen entfernen und sortieren ===
+    # Doppelte Quellen entfernen und sortieren
     unique_sources = []
     for src in ctx:
         entry = (src.source, src.page)

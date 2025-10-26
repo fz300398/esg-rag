@@ -10,14 +10,14 @@ from dotenv import load_dotenv, find_dotenv
 import chromadb
 from chromadb.config import Settings as ChromaSettings
 
-# === LOGGING ===
+# LOGGING
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
 )
 logger = logging.getLogger(__name__)
 
-# === ENVIRONMENT ===
+# ENVIRONMENT
 env_path = find_dotenv(usecwd=True)
 if env_path:
     load_dotenv(env_path)
@@ -29,13 +29,13 @@ if local_path.exists():
     load_dotenv(local_path, override=True)
     logger.info("Lokale .env.local geladen (überschreibt Standardwerte)")
 
-# === CONFIGURATION ===
+# CONFIGURATION
 CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", 1000))
 CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", 150))
 CHROMA_DIR = Path(os.getenv("CHROMA_DIR", "chroma"))
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "intfloat/multilingual-e5-base")
 
-# === DATA CLASS ===
+# DATA CLASS
 @dataclass
 class Chunk:
     text: str
@@ -44,11 +44,10 @@ class Chunk:
     chunk_id: str
     title: Optional[str] = None
 
-# === MODEL (einmal laden) ===
 logger.info(f"Lade Embedding-Modell: {EMBEDDING_MODEL}")
 st_model = SentenceTransformer(EMBEDDING_MODEL)
 
-# === UTILS ===
+# UTILS
 def chunk_text(text: str, size: int = CHUNK_SIZE, overlap: int = CHUNK_OVERLAP) -> List[str]:
     """Teilt Text in überlappende Chunks."""
     text = " ".join((text or "").split())
@@ -62,7 +61,6 @@ def chunk_text(text: str, size: int = CHUNK_SIZE, overlap: int = CHUNK_OVERLAP) 
             break
         start = end - overlap
     return chunks
-
 
 def load_pdfs(folder: Path) -> List[Chunk]:
     """Lädt alle PDFs im Ordner und zerlegt sie in Text-Chunks."""
@@ -105,7 +103,6 @@ def load_pdfs(folder: Path) -> List[Chunk]:
     logger.info(f"{len(chunks)} Text-Chunks aus {len(pdf_files)} PDFs extrahiert.")
     return chunks
 
-
 def build_chroma(chunks: List[Chunk], model_name: str, chroma_dir: Path, reset: bool = False) -> bool:
     """Erstellt oder erweitert den Chroma-Index mit Duplikatsschutz."""
     try:
@@ -145,8 +142,7 @@ def build_chroma(chunks: List[Chunk], model_name: str, chroma_dir: Path, reset: 
         logger.exception("Fehler beim Aufbau des Chroma-Index")
         return False
 
-
-# === MAIN ===
+# MAIN
 def main() -> bool:
     parser = argparse.ArgumentParser(description="Ingest ESG-Dokumente in Chroma-Index.")
     parser.add_argument("--input", type=Path, default=Path("data"))
