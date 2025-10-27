@@ -1,4 +1,5 @@
 <div class="chat-container">
+  <!-- === HEADER === -->
   <header class="chat-header">
     <div class="logo-title">
       <img src="assets/logo.png" alt="THWS Logo" class="thws-logo" />
@@ -28,6 +29,7 @@
     </div>
   </header>
 
+  <!-- === CHAT WINDOW === -->
   <div class="chat-window" #chatWindow>
     <div
       *ngFor="let msg of messages"
@@ -40,10 +42,47 @@
       <div class="msg-bubble">
         <p>{{ msg.text }}</p>
 
+        <!-- === BOT-ANTWORTEN: Quellen & Confidence === -->
         <div
           *ngIf="msg.sender === 'bot' && msg.sources?.length"
           class="sources"
         >
+          <!-- Confidence-Wert -->
+          <div
+            *ngIf="msg.confidence !== null"
+            class="confidence"
+          >
+            <strong>Verlässlichkeit:</strong>
+            <span
+              [ngStyle]="{
+                color:
+                  msg.confidence >= 0.8
+                    ? 'green'
+                    : msg.confidence >= 0.4
+                    ? '#e6b800'
+                    : 'red'
+              }"
+            >
+              {{ (msg.confidence * 100) | number: '1.0-0' }} %
+            </span>
+
+            <!-- Balkenanzeige -->
+            <div class="confidence-bar">
+              <div
+                class="confidence-fill"
+                [style.width.%]="msg.confidence * 100"
+                [style.backgroundColor]="
+                  msg.confidence >= 0.8
+                    ? 'green'
+                    : msg.confidence >= 0.6
+                    ? '#e6b800'
+                    : 'red'
+                "
+              ></div>
+            </div>
+          </div>
+
+          <!-- Quellenliste -->
           <strong>Quellen:</strong>
           <ul>
             <li *ngFor="let s of msg.sources">
@@ -55,6 +94,7 @@
     </div>
   </div>
 
+  <!-- === CHAT INPUT === -->
   <form class="chat-input" (submit)="send(); $event.preventDefault()">
     <textarea
       [(ngModel)]="question"

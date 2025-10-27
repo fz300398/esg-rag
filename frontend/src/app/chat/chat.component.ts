@@ -8,6 +8,7 @@ interface Message {
   sender: 'user' | 'bot';
   text: string;
   sources?: { source: string; page: number }[]; // Quellenanzeige
+  confidence?: number | null;
 }
 
 @Component({
@@ -63,21 +64,22 @@ export class ChatComponent {
 
     this.loading = true;
     this.chat.ask(payload).subscribe({
-      next: (response: any) => {
-        // Quellen aus Backend übernehmen
-        this.pushAndScroll({
-          sender: 'bot',
-          text: response?.answer ?? 'Keine Antwort erhalten.',
-          sources: response?.sources ?? []
-        });
-        this.loading = false;
-      },
-      error: (err) => {
-        console.error('Fehler beim Abrufen der Antwort:', err);
-        this.pushAndScroll({ sender: 'bot', text: 'Fehler beim Abrufen der Antwort.' });
-        this.loading = false;
-      }
-    });
+	  next: (response: any) => {
+		// Quellen & Confidence übernehmen
+		this.pushAndScroll({
+		  sender: 'bot',
+		  text: response?.answer ?? 'Keine Antwort erhalten.',
+		  sources: response?.sources ?? [],
+		  confidence: response?.confidence ?? null,
+		});
+		this.loading = false;
+	  },
+	  error: (err) => {
+		console.error('Fehler beim Abrufen der Antwort:', err);
+		this.pushAndScroll({ sender: 'bot', text: 'Fehler beim Abrufen der Antwort.' });
+		this.loading = false;
+	  }
+	});
   }
 
   onFilesSelected(event: any): void {

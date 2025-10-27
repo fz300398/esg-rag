@@ -75,39 +75,60 @@ async def query(q: Query):
     logger.info(f"Neue Anfrage: {q.question}")
 
     try:
-        # Session-ID prüfen oder neu erzeugen
-        session_id = q.session_id or str(uuid.uuid4())
+        if len(q.question.strip()) == 0:
+            raise HTTPException(status_code=400, detail="Leere Anfrage.")
 
-        # Verlauf aus Speicher holen
+        session_id = q.session_id or str(uuid.uuid4())
         history = session_store.get(session_id, [])
 
-        # Kontext aus bisherigen Nachrichten extrahieren
         context_text = "\n".join([
             f"{m['role'].capitalize()}: {m['content']}" for m in history[-5:]
         ])
 
-        # RAG-Antwort mit Kontext holen
-        answer_text, ctx, confidence = answer(q.question, history=context_text)
+        # Performance-Messung
+        import time
+        start_time = time.time()
 
-        # Verlauf aktualisieren
+        # Antwort abrufen
+        answer_text, ctx, confidence = answer(q.question, history=context_text)
+        elapsed = time.time() - start_time
+        logger.info(f"Antwort generiert – Zeit: {elapsed:.2f}s, Confidence: {confidence:.2f}, Quellen: {len(ctx)}")
+
+        # Verlauf speichern
         history.append({"role": "user", "content": q.question})
         history.append({"role": "assistant", "content": answer_text})
         session_store[session_id] = history
 
-        # Antwort zurückgeben
+        # Doppelte Quellen filtern
+        unique_sources = []
+        for c in ctx:
+            entry = (c.source, c.page)
+            if entry not in unique_sources:
+                unique_sources.append(entry)
+
+        sources = [
+            {
+                "text": c.text[:400] + ("..." if len(c.text) > 400 else ""),
+                "source": c.source,
+                "page": c.page,
+                "chunk_id": c.chunk_id,
+            }
+            for c in ctx
+            if (c.source, c.page) in unique_sources
+        ]
+
+        # Confidence auf 0–1 begrenzen
+        confidence = round(float(confidence), 2)
+        if confidence < 0:
+            confidence = 0.0
+        elif confidence > 1:
+            confidence = 1.0
+
         return {
             "session_id": session_id,
             "answer": answer_text,
-            "confidence": confidence,
-            "sources": [
-                {
-                    "text": c.text[:400] + ("..." if len(c.text) > 400 else ""),
-                    "source": c.source,
-                    "page": c.page,
-                    "chunk_id": c.chunk_id,
-                }
-                for c in ctx
-            ],
+            "confidence": confidence if sources else None,  # Nur wenn Quellen existieren
+            "sources": sources,
         }
 
     except Exception as e:

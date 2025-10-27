@@ -30,13 +30,20 @@ label {
   color: #222;
 }
 
-input {
+input,
+button {
+  display: block;
   width: 100%;
+  box-sizing: border-box;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-family: inherit;
+}
+
+input {
   padding: 0.7rem;
   margin-top: 0.4rem;
   border: 1px solid #ccc;
-  border-radius: 8px;
-  font-size: 1rem;
   transition: border-color 0.2s ease;
 }
 
@@ -46,15 +53,12 @@ input:focus {
 }
 
 button {
-  width: 100%;
-  margin-top: 1.8rem;
+  margin-top: 1.5rem;
   padding: 0.8rem;
   background: linear-gradient(90deg, #005aa7, #0076c5);
   color: #fff;
   border: none;
-  border-radius: 8px;
   cursor: pointer;
-  font-size: 1rem;
   font-weight: 600;
   transition: background 0.3s ease;
 }
