@@ -70,6 +70,8 @@ RERANKER_MODEL = os.getenv("RERANKER_MODEL", "BAAI/bge-reranker-v2-m3")
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "phi3:mini")
 OLLAMA_STREAM = os.getenv("OLLAMA_STREAM", "false").lower() == "true"
+RETRIEVE_K = os.getenv("RETRIEVE_K", 24)
+TOP_K      = os.getenv("TOP_K", 6)
 
 # MODELLE LADEN
 logger.info("Lade Embedding-Modell ...")
@@ -98,7 +100,7 @@ def embed_query(query: str) -> np.ndarray:
     """Wandelt die Nutzerfrage in einen semantischen Vektor um."""
     return st_model.encode([query], normalize_embeddings=True)[0].astype("float32")
 
-def retrieve(query: str, k: int = 6, min_results: int = 2) -> List[Retrieved]:
+def retrieve(query: str, k: int = RETRIEVE_K, min_results: int = 2) -> List[Retrieved]:
     """Ruft relevante Dokumentpassagen aus ChromaDB ab."""
     q_emb = embed_query(query).tolist()
     res = collection.query(query_embeddings=[q_emb], n_results=k, include=["documents", "metadatas"])
@@ -136,7 +138,7 @@ def query_ollama(prompt: str) -> str:
         return "Beim Abrufen der Antwort vom LLM ist ein Fehler aufgetreten."
 
 # ANTWORTGENERIERUNG
-def answer(question: str, top_k: int = 6, fallback_threshold: int = 2, history: Optional[str] = None) -> Tuple[
+def answer(question: str, top_k: int = TOP_K, fallback_threshold: int = 2, history: Optional[str] = None) -> Tuple[
     str, List[Retrieved], float]:
     logger.info(f"Neue Frage: {question}")
 
@@ -156,7 +158,7 @@ def answer(question: str, top_k: int = 6, fallback_threshold: int = 2, history: 
         return response, [], 1.0  # Keine Quellen / volle Confidence
 
     # Dokumente abrufen
-    ctx = retrieve(translated_question, k=top_k * 2, min_results=fallback_threshold)
+    ctx = retrieve(translated_question, RETRIEVE_K, min_results=fallback_threshold)
 
     # Fallback, falls kein Kontext gefunden
     if not ctx:

@@ -30,8 +30,8 @@ if local_path.exists():
     logger.info("Lokale .env.local geladen (überschreibt Standardwerte)")
 
 # CONFIGURATION
-CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", 1000))
-CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", 150))
+CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", 500))
+CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", 100))
 CHROMA_DIR = Path(os.getenv("CHROMA_DIR", "chroma"))
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "intfloat/multilingual-e5-base")
 
